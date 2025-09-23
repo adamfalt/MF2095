@@ -1,6 +1,5 @@
 #include <stdio.h> 
 #include <stdlib.h> 
-#include <stdint.h> //to use uint32_t
 
 
 int main(){
@@ -20,44 +19,51 @@ int main(){
     int log_count = 0; //Number of stored values
     char input[100]; //Input, larger than task one to comfortably hold hex without trunkarion
     int temperature_array[log_size]; //Array to store temperatures, size = log size
-
+    unsigned int hex_input; 
 
     while(1){ //Inf loop
 
-//Use fgets to read input
+        //Use fgets to read input
         fgets(input, sizeof(input), stdin);
 
+        //Scans the input for Hexadecimal input, %x for hexadecimal, &hex is adress of hex as requierd bu sscanf
+        sscanf (input, "%x" , &hex_input);	
 
-        if(input[0] == 'T'){
-            int temp; //Variable to store temperature
+        //Bitshift and mask the three reserved bits
+        unsigned int reserved = (hex_input >> 29) & 0x7; //0x7 = 0b111
+        //Bitshift and mask the three type bits
+        unsigned int type = (hex_input >> 26) & 0x7; //0x7 = 0b111 
+        //Mask the data(the lowest 26 bits)
+        unsigned int data =  hex_input & 0x03FFFFFF;
 
-            //Check input after 'T' and add value to temp with pointer &temp if it's a positive number
-            if(sscanf(input + 1, "%d", &temp) == 1 && temp >= 0){ 
-                
-                // If log is not full, add temperature to array    
-                if(log_count < log_size) {
-                    temperature_array[log_count] = temp;
-                    log_count++;
-                    printf("Received Temperature: %d\n", temp);
-                }
-                // If log is full, print a message
-                else {
-                    printf("Log Full\n");
-                }
+        //Check if the reserve bits are 0, otherwise error
+        if (reserved != 0b000) {
+            printf("Input Error\n");
+        }
+
+        //0b000 for temperature value
+        else if(type == 0b000){
+            // If log is not full, add temperature to array
+            if (log_count < log_size)
+            {
+                temperature_array[log_count] = data;
+                log_count++;
+                printf("Received Temperature: %d\n", data);
             }
-            // If input is invalid, print an error message          
-            else {
-                printf("Input Error\n");
-            }           
+            // If log is full, print a message
+            else
+            {
+                printf("Log Full\n");
+            }
         }
 
         // Exit the program
-        else if (input[0] == 'Q' && input[1] == '\n') {
+        else if (type == 0b110) {
             printf("Exiting...\n");
             break;
         }
 
-        else if(input[0] == 'A' && input[1] == '\n'){
+        else if(type == 0b010){
             // Check if log is empty
             if(log_count == 0){
                 printf("Average Temperature: N/A\n");
@@ -75,7 +81,7 @@ int main(){
             }  
         }  
         //Find minimum temp
-        else if (input[0] == 'N' && input[1] == '\n'){
+        else if (type == 0b011){
             // Ceck if log is empty
             if(log_count == 0){
                 printf("Minimum Temperature: N/A\n");
@@ -95,7 +101,7 @@ int main(){
             }
         }
         // Find the maximum temperature in the log
-        else if (input[0] == 'X' && input[1] == '\n') {
+        else if (type == 0b100) {
             // Check if log is empty
             if(log_count == 0){
                 printf("Maximum Temperature: N/A\n");
@@ -117,13 +123,18 @@ int main(){
             }
         }
         // List the entries in the log
-        else if (input[0] == 'L' && input[1] == '\n') {
+        else if (type == 0b101) {
             // Print the number of entries in the log
             printf("Log: %d entries\n", log_count);
             // Print the entries in the log
             for(int i = 0; i < log_count; i++) {
                 printf("Temperature: %d\n", temperature_array[i]);
             }
+        }
+
+        // Reserved for Humidity
+        else if (type == 0b001){
+            printf("Input Error\n");
         }
 
         else{
